@@ -47,6 +47,7 @@ void velodyneHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
 double total_time =0;
 int total_frame=0;
+
 std::string baselink_tf_name = "base_link";
 void laser_processing(){
     while(1){
@@ -55,6 +56,7 @@ void laser_processing(){
             mutex_lock.lock();
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_in(new pcl::PointCloud<pcl::PointXYZI>());
             pcl::fromROSMsg(*pointCloudBuf.front(), *pointcloud_in);
+            std::string pointcloud_in_frame_id = pointcloud_in.header.frame_id;
             ros::Time pointcloud_time = (pointCloudBuf.front())->header.stamp;
             pointCloudBuf.pop();
             mutex_lock.unlock();
@@ -76,7 +78,12 @@ void laser_processing(){
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_filtered(new pcl::PointCloud<pcl::PointXYZI>());  
             *pointcloud_filtered+=*pointcloud_edge;
             *pointcloud_filtered+=*pointcloud_surf;
+
+            
             pcl::toROSMsg(*pointcloud_filtered, laserCloudFilteredMsg);
+            geometry_msgs::TransformStamped transform_stamped = tfBuffer.lookupTransform(pointcloud_in_frame_id, baselink_tf_name, pointcloud_time, ros::Duration(1.0));
+            Eigen::Matrix4f mat = tf2::transformToEigen(transform_stamped.transform).matrix().cast<float>();
+            pcl_ros::transformPointCloud(mat, laserCloudFilteredMsg, laserCloudFilteredMsg);
             laserCloudFilteredMsg.header.stamp = pointcloud_time;
             laserCloudFilteredMsg.header.frame_id = baselink_tf_name;
             pubLaserCloudFiltered.publish(laserCloudFilteredMsg);
