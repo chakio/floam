@@ -32,6 +32,7 @@
   <run_depend>rosbag</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>eigen_conversions</run_depend>
+  <run_depend>pcl_ros</run_depend>
 
   <export>
   </export>

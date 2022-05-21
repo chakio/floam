@@ -17,11 +17,18 @@
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <pcl_ros/transforms.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2/transform_datatypes.h>
 
 //pcl lib
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl_ros/transforms.h>
 
 //local lib
 #include "lidar.h"
@@ -37,6 +44,8 @@ ros::Publisher pubEdgePoints;
 ros::Publisher pubSurfPoints;
 ros::Publisher pubLaserCloudFiltered;
 
+
+
 void velodyneHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 {
     mutex_lock.lock();
@@ -50,13 +59,14 @@ int total_frame=0;
 
 std::string baselink_tf_name = "base_link";
 void laser_processing(){
+    tf::TransformListener tfListener;
     while(1){
         if(!pointCloudBuf.empty()){
             //read data
             mutex_lock.lock();
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_in(new pcl::PointCloud<pcl::PointXYZI>());
             pcl::fromROSMsg(*pointCloudBuf.front(), *pointcloud_in);
-            std::string pointcloud_in_frame_id = pointcloud_in.header.frame_id;
+            std::string pointcloud_in_frame_id = (pointCloudBuf.front())->header.frame_id;
             ros::Time pointcloud_time = (pointCloudBuf.front())->header.stamp;
             pointCloudBuf.pop();
             mutex_lock.unlock();
@@ -80,25 +90,27 @@ void laser_processing(){
             *pointcloud_filtered+=*pointcloud_surf;
 
             
+            
             pcl::toROSMsg(*pointcloud_filtered, laserCloudFilteredMsg);
-            geometry_msgs::TransformStamped transform_stamped = tfBuffer.lookupTransform(pointcloud_in_frame_id, baselink_tf_name, pointcloud_time, ros::Duration(1.0));
-            Eigen::Matrix4f mat = tf2::transformToEigen(transform_stamped.transform).matrix().cast<float>();
-            pcl_ros::transformPointCloud(mat, laserCloudFilteredMsg, laserCloudFilteredMsg);
             laserCloudFilteredMsg.header.stamp = pointcloud_time;
+            laserCloudFilteredMsg.header.frame_id = pointcloud_in_frame_id;
+            pcl_ros::transformPointCloud(baselink_tf_name, laserCloudFilteredMsg, laserCloudFilteredMsg, tfListener);
             laserCloudFilteredMsg.header.frame_id = baselink_tf_name;
             pubLaserCloudFiltered.publish(laserCloudFilteredMsg);
 
             sensor_msgs::PointCloud2 edgePointsMsg;
             pcl::toROSMsg(*pointcloud_edge, edgePointsMsg);
             edgePointsMsg.header.stamp = pointcloud_time;
-            edgePointsMsg.header.frame_id = baselink_tf_name;
+            edgePointsMsg.header.frame_id = pointcloud_in_frame_id;
+            pcl_ros::transformPointCloud(baselink_tf_name, edgePointsMsg, edgePointsMsg, tfListener);
             pubEdgePoints.publish(edgePointsMsg);
 
 
             sensor_msgs::PointCloud2 surfPointsMsg;
             pcl::toROSMsg(*pointcloud_surf, surfPointsMsg);
             surfPointsMsg.header.stamp = pointcloud_time;
-            surfPointsMsg.header.frame_id = baselink_tf_name;
+            surfPointsMsg.header.frame_id = pointcloud_in_frame_id;
+            pcl_ros::transformPointCloud(baselink_tf_name, surfPointsMsg, surfPointsMsg, tfListener);
             pubSurfPoints.publish(surfPointsMsg);
 
         }
