@@ -48,7 +48,8 @@ void velodyneHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     mutex_lock.unlock();
 }
 
-
+std::string map_tf_name = "map";
+std::string baselink_tf_name = "base_link";
 void laser_mapping(){
     while(1){
         if(!odometryBuf.empty() && !pointCloudBuf.empty()){
@@ -88,7 +89,7 @@ void laser_mapping(){
             sensor_msgs::PointCloud2 PointsMsg;
             pcl::toROSMsg(*pc_map, PointsMsg);
             PointsMsg.header.stamp = pointcloud_time;
-            PointsMsg.header.frame_id = "map";
+            PointsMsg.header.frame_id = map_tf_name;
             map_pub.publish(PointsMsg); 
             
 
@@ -111,12 +112,14 @@ int main(int argc, char **argv)
     double max_dis = 60.0;
     double min_dis = 2.0;
     double map_resolution = 0.4;
+    std::string odom_topic_name = "/odom";
     nh.getParam("/scan_period", scan_period); 
     nh.getParam("/vertical_angle", vertical_angle); 
     nh.getParam("/max_dis", max_dis);
     nh.getParam("/min_dis", min_dis);
     nh.getParam("/scan_line", scan_line);
     nh.getParam("/map_resolution", map_resolution);
+    nh.getParam("/odom_topic_name", odom_topic_name);
 
     lidar_param.setScanPeriod(scan_period);
     lidar_param.setVerticalAngle(vertical_angle);
@@ -126,7 +129,7 @@ int main(int argc, char **argv)
 
     laserMapping.init(map_resolution);
     ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points_filtered", 100, velodyneHandler);
-    ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry>("/odom", 100, odomCallback);
+    ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry>(odom_topic_name, 100, odomCallback);
 
     map_pub = nh.advertise<sensor_msgs::PointCloud2>("/map", 100);
     std::thread laser_mapping_process{laser_mapping};
