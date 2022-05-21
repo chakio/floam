@@ -49,7 +49,6 @@ void velodyneHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 }
 
 std::string map_tf_name = "map";
-std::string baselink_tf_name = "base_link";
 void laser_mapping(){
     while(1){
         if(!odometryBuf.empty() && !pointCloudBuf.empty()){
@@ -120,6 +119,7 @@ int main(int argc, char **argv)
     nh.getParam("/scan_line", scan_line);
     nh.getParam("/map_resolution", map_resolution);
     nh.getParam("/odom_topic_name", odom_topic_name);
+    nh.getParam("/map_tf_name", map_tf_name);
 
     lidar_param.setScanPeriod(scan_period);
     lidar_param.setVerticalAngle(vertical_angle);

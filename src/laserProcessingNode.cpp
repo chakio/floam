@@ -47,7 +47,7 @@ void velodyneHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
 double total_time =0;
 int total_frame=0;
-
+std::string baselink_tf_name = "base_link";
 void laser_processing(){
     while(1){
         if(!pointCloudBuf.empty()){
@@ -78,20 +78,20 @@ void laser_processing(){
             *pointcloud_filtered+=*pointcloud_surf;
             pcl::toROSMsg(*pointcloud_filtered, laserCloudFilteredMsg);
             laserCloudFilteredMsg.header.stamp = pointcloud_time;
-            laserCloudFilteredMsg.header.frame_id = "base_link";
+            laserCloudFilteredMsg.header.frame_id = baselink_tf_name;
             pubLaserCloudFiltered.publish(laserCloudFilteredMsg);
 
             sensor_msgs::PointCloud2 edgePointsMsg;
             pcl::toROSMsg(*pointcloud_edge, edgePointsMsg);
             edgePointsMsg.header.stamp = pointcloud_time;
-            edgePointsMsg.header.frame_id = "base_link";
+            edgePointsMsg.header.frame_id = baselink_tf_name;
             pubEdgePoints.publish(edgePointsMsg);
 
 
             sensor_msgs::PointCloud2 surfPointsMsg;
             pcl::toROSMsg(*pointcloud_surf, surfPointsMsg);
             surfPointsMsg.header.stamp = pointcloud_time;
-            surfPointsMsg.header.frame_id = "base_link";
+            surfPointsMsg.header.frame_id = baselink_tf_name;
             pubSurfPoints.publish(surfPointsMsg);
 
         }
@@ -117,6 +117,7 @@ int main(int argc, char **argv)
     nh.getParam("/max_dis", max_dis);
     nh.getParam("/min_dis", min_dis);
     nh.getParam("/scan_line", scan_line);
+    nh.getParam("/baselink_tf_name", baselink_tf_name);
 
     lidar_param.setScanPeriod(scan_period);
     lidar_param.setVerticalAngle(vertical_angle);
